@@ -341,57 +341,70 @@ private void Or() :
 
 /*
 And:
-    And 'AND' Atom
-    Atom
+    And 'AND' Not
+    Not
 */
 private void And() :
 {
 }
 {
-    Atom()
+    Not()
     (
         <AND>
-        Atom()
+        Not()
     )*
 }
 
 /*
+Not:
+    'NOT' Not
+    Atom
+*/
+private void Not() :
+{
+}
+{
+    <NOT> Not()
+|
+	Atom()
+}
+
+/*
 Atom:
+	'(' Constraint ')'
     Relational
     Quantification
-    Block
 */
 private void Atom() :
 {
 }
-{   Relational()
-|   Quantification()
-|   Block()
+{
+	LOOKAHEAD( Relational() )
+    Relational()
+|
+	"("
+	Constraint()
+	")" 
+|
+    Quantification()
 }
 
 /*
 Relational:
     Term Operator Term
-    Term 'IN' Tuple
 */
 private void Relational() :
 {
 }
 {
     Term()
-    (
-        Operator()
-        Term()
-    |
-        <IN>
-        Tuple()
-    )
+    Operator()
+    Term()
 }
 
 /*
 Quantification:
     'EXISTS' Name 'IN' Primary Atom
-    'EXISTS' Name 'IN' Tuple Atom
 */
 private void Quantification() :
 {
@@ -400,57 +413,87 @@ private void Quantification() :
     <EXISTS>
     Name()
     <IN>
-    (
-        Primary()
-        Atom()
-    |
-        Tuple()
-        Atom()
-    )
-}
-
-/*
-Block:
-    '{' Constraint '}'
-*/
-private void Block() :
-{
-}
-{
-    "{"
-    Constraint()
-    "}"
+    Primary()
+    Atom()
 }
 
 /*
 Term:
-    Primary
+    Additive
 */
 private void Term() :
 {
 }
 {
+    Additive()
+}
+
+/*
+Additive:
+    Additive '+' Multiplicative
+    Additive '-' Multiplicative
+    Multiplicative
+*/
+private void Additive() :
+{
+}
+{
+    Multiplicative()
+	(
+	    <ADD>
+	    Multiplicative()
+	|
+	    <SUBTRACT>
+	    Multiplicative()
+	)*
+}
+
+/*
+Multiplicative:
+    Multiplicative '*' Unary
+    Multiplicative '/' Unary
+    Multiplicative '%' Unary
+    Unary
+*/
+private void Multiplicative() :
+{
+}
+{
+	Unary()
+	(
+	    <MULTIPLY>
+	    Unary()
+	|
+	    <DIVIDE>
+	    Unary()
+	|
+	    <REMAINDER>
+	    Unary()
+	)*
+}
+
+/*
+Unary:
+    '-' Unary
+    Primary
+*/
+private void Unary() :
+{
+}
+{
+	<SUBTRACT>
+	Unary()
+|
     Primary()
 }
 
 /*
-Tuple:
-    '(' TermList ')'    
-*/
-private void Tuple() :
-{
-}
-{
-    "("
-    TermList()
-    ")"
-}
-
-/*
 Primary:
-    Property
+    '(' Term ')'
     Literal
+    Property
     Construct
+    List
     Name
 */
 private void Primary() :
@@ -458,7 +501,13 @@ private void Primary() :
     Token t;
 }
 {
+	"("
+	Term()
+	")"
+|
     Literal()
+|
+	List()
 |
     LOOKAHEAD(2)
     Property()
@@ -478,6 +527,7 @@ Operator:
     '<='
     '>='
     'LIKE'
+    'IN'
 */
 private void Operator() :
 {
@@ -489,6 +539,24 @@ private void Operator() :
 |   <LESS_THAN_OR_EQUAL>
 |   <GREATER_THAN_OR_EQUAL>
 |   <LIKE>
+|	<IN>
+}
+
+/*
+List:
+    '[' TermList? ']'
+*/
+private void List() :
+{
+}
+{
+    "["
+    (
+    	TermList()
+    |
+    	{}
+    )
+    "]"
 }
 
 /*
@@ -509,13 +577,15 @@ private void TermList() :
 
 /*
 Property:
-    ID '.' ID
+    Name '.' Name
 */
 private void Property() :
 {
 }
 {
-    <ID> "." <ID>
+    Name()
+    "."
+    Name()
 }
 
 /*
@@ -545,13 +615,16 @@ private void Literal() :
 
 /*
 Construct:
-    ID '(' TermList ')'
+    Name '(' TermList ')'
 */
 private void Construct() :
 {
 }
 {
-    <ID> "(" TermList() ")"
+    Name()
+    "("
+    TermList()
+    ")"
 }
 
 /*
