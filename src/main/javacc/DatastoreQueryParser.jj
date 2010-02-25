@@ -1,0 +1,566 @@
+/*
+ * Copyright 2010 @ashigeru.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */
+options {
+    STATIC = false;
+    UNICODE_INPUT = true;
+    LOOKAHEAD = 1;
+
+    /* for debug only 
+    DEBUG_PARSER = true;
+    DEBUG_LOOKAHEAD = true;
+    /* */
+}
+
+PARSER_BEGIN(DatastoreQueryParser0)
+/*
+ * Copyright 2010 @ashigeru.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */
+package org.ashigeru.appengine.datastore.parser;
+
+class DatastoreQueryParser0 {
+}
+PARSER_END(DatastoreQueryParser0)
+
+// ----------------- lexical part --------------------
+
+/*
+EndOfLineComment :
+    -- CommentBodyPart*
+CommentBodyPart :
+    any character except LF CR
+*/
+SPECIAL_TOKEN : 
+{   <LINE_COMMENT : "--" ( ~["\r", "\n"] )* >
+}
+
+/*
+Whitespace : one of
+    SP HT CR LF
+*/
+SPECIAL_TOKEN :
+{   <SPACE : " " | "\t" | "\r" | "\n">
+}
+
+/*
+Keyword : one of
+    FROM WHERE EXISTS
+*/
+TOKEN [IGNORE_CASE] :
+{   <FROM : "from">
+|   <WHERE : "where">
+|   <EXISTS : "exists">
+}
+
+/*
+Separator: one of
+    ( ) { } [ ] , . ;
+*/
+TOKEN :
+{   <OPEN_PAREN    : "(" >
+|   <OPEN_BRACE    : "{" >
+|   <OPEN_BRACKET  : "[" >
+|   <CLOSE_PAREN   : ")" >
+|   <CLOSE_BRACE   : "}" >
+|   <CLOSE_BRACKET : "]" >
+|   <COMMA : "," >
+|   <DOT : "." >
+|   <SEMICOLON : ";" >
+}
+
+/*
+Operator: one of
+    * / % + -
+    ==  !=  <   >  <=  >=
+    and not or
+    like in
+*/
+TOKEN [IGNORE_CASE] :
+{   <ADD : "+">
+|   <SUBTRACT : "-">
+|   <MULTIPLY : "*">
+|   <DIVIDE : "/">
+|   <REMAINDER : "%">
+|   <DOUBLE_EQUAL : "==">
+|   <NOT_EQUAL : "!=">
+|   <LESS_THAN : "<">
+|   <GREATER_THAN : ">">
+|   <LESS_THAN_OR_EQUAL : "<=">
+|   <GREATER_THAN_OR_EQUAL : ">=">
+|   <AND : "and">
+|   <OR : "or">
+|   <NOT : "not">
+|   <LIKE : "like">
+|   <IN : "in">
+}
+
+/*
+IntegerLiteral :
+    DecimalIntegerLiteral
+    HexIntegerLiteral
+    OctalIntegerLiteral
+DecimalIntegerLiteral :
+    0
+    NonZeroDigit Digit*
+HexIntegerLiteral :
+    0 x HexDigit+
+    0 X HexDigit+
+OctalIntegerLiteral :
+    0 OctDigit+
+NonZeroDigit : one of
+    1 2 3 4 5 6 7 8 9
+Digit : one of
+    0 NonZeroDigit
+HexDigit : one of
+    Digit a b c d e f A B C D E F
+OctDigit : one of
+    0 1 2 3 4 5 6 7
+*/
+TOKEN :
+{   <INTEGER
+    : <DECIMAL_INTEGER>
+    | <HEX_INTEGER>
+    | <OCTAL_INTEGER>
+    >
+|   <#DECIMAL_INTEGER
+    : "0"
+    | <NON_ZERO_DIGIT> (<DIGIT>)*
+    >
+|   <#HEX_INTEGER
+    : "0" ["x", "X"] (<HEX_DIGIT>)+
+    >
+|   <#OCTAL_INTEGER
+    : "0" (<OCT_DIGIT>)+
+    >
+|   <#NON_ZERO_DIGIT : ["1"-"9"]>
+|   <#HEX_DIGIT : ["0"-"9", "A"-"F", "a"-"f"]>
+|   <#OCT_DIGIT : ["0"-"7"]>
+}
+
+/*
+RealNumberLiteral :
+    Digit+ . Digit* DecimalExpornentPart?
+    . Digit+ DecimalExpornentPart?
+DecimalExpornentPart :
+    e SignedInteger
+    E SignedInteger
+SignedInteger :
+    + Digit+
+    - Digit+
+*/
+TOKEN :
+{   <REAL_NUMBER
+    : (<DIGIT>)+ "." (<DIGIT>)* (<DECIMAL_EXPONENT_PART>)?
+    | "." (<DIGIT>)+ (<DECIMAL_EXPONENT_PART>)?
+    >
+|   <#DECIMAL_EXPONENT_PART : ["e", "E"] <SIGNED_INTEGER>>
+|   <#SIGNED_INTEGER : ["+", "-"] (<DIGIT>)+>
+}
+
+/*
+BooleanLiteral : one of
+    true false
+*/
+TOKEN :
+{   <TRUE : "true">
+|   <FALSE : "false">
+}
+
+/*
+NullLiteral :
+    null
+*/
+TOKEN :
+{   <NULL : "null">
+}
+
+/*
+StringLiteral :
+    ' SingleQuotedCharacter* '
+    " DoubleQuotedCharacter* "
+SingleQuotedCharacter :
+    CharacterWithoutSingleQuote
+    EscapeSequence
+DoubleQuotedCharacter :
+    CharacterWithoutDoubleQuote
+    EscapeSequence
+CharacterWithoutSingleQuote :
+    any character except ' \
+CharacterWithoutSingleQuote :
+    any character except " \
+EscapeSequence :
+    \ SingleEscapeCharacter
+    UnicodeEscapeCharacter
+SingleEscapeCharacter : one of
+    b t n f r " ' ( ) { } [ ] \
+UnicodeEscapeCharacter:
+    \ u HexDigit HexDigit HexDigit HexDigit
+*/
+TOKEN :
+{   <STRING
+    : "'" (<SINGLE_QUOTED_CHARACTER>)* "'"
+    | "\"" (<DOUBLE_QUOTED_CHARACTER>)* "\""
+    >
+|   <#SINGLE_QUOTED_CHARACTER
+    : <CHARACTER_WITHOUT_SINGLE_QUOTE>
+    | <ESCAPE_SEQUENCE>
+    >
+|   <#DOUBLE_QUOTED_CHARACTER
+    : <CHARACTER_WITHOUT_DOUBLE_QUOTE>
+    | <ESCAPE_SEQUENCE>
+    >
+|   <#CHARACTER_WITHOUT_SINGLE_QUOTE : ~["'", "\\"]>
+|   <#CHARACTER_WITHOUT_DOUBLE_QUOTE : ~["\"", "\\"]>
+|   <#ESCAPE_SEQUENCE
+    : "\\" <SINGLE_ESCAPE_CHARACTER>
+    | <UNICODE_ESCAPE_CHARACTER>
+    >
+|   <#SINGLE_ESCAPE_CHARACTER
+    : ["b", "t", "n", "f", "r"]
+    | ["\"", "'"]
+    | "#"
+    | ["(", ")", "{", "}", "[", "]"]
+    | "\\"
+    >
+|   <#UNICODE_ESCAPE_CHARACTER
+    : "\\" "u" <HEX_DIGIT> <HEX_DIGIT> <HEX_DIGIT> <HEX_DIGIT>
+    >
+}
+
+/*
+Identifier
+*/
+TOKEN :
+{   <ID : <IDENTIFIER_START> (<IDENTIFIER_PART>)* >
+|   <#IDENTIFIER_START : <JAVA_ID_LETTER> >
+|   <#IDENTIFIER_PART : <JAVA_ID_LETTER> | <JAVA_ID_DIGIT> >
+|   <#JAVA_ID_LETTER
+    : "\u0024"
+    | ["\u0041"-"\u005a"]
+    | "\u005f"
+    | ["\u0061"-"\u007a"]
+    | ["\u00c0"-"\u00d6"]
+    | ["\u00d8"-"\u00f6"]
+    | ["\u00f8"-"\u00ff"]
+    | ["\u0100"-"\u1fff"]
+    | ["\u3040"-"\u318f"]
+    | ["\u3300"-"\u337f"]
+    | ["\u3400"-"\u3d2d"]
+    | ["\u4e00"-"\u9fff"]
+    | ["\uf900"-"\ufaff"]
+    >
+|   <#JAVA_ID_DIGIT
+    : ["\u0030"-"\u0039"]
+    | ["\u0660"-"\u0669"]
+    | ["\u06f0"-"\u06f9"]
+    | ["\u0966"-"\u096f"]
+    | ["\u09e6"-"\u09ef"]
+    | ["\u0a66"-"\u0a6f"]
+    | ["\u0ae6"-"\u0aef"]
+    | ["\u0b66"-"\u0b6f"]
+    | ["\u0be7"-"\u0bef"]
+    | ["\u0c66"-"\u0c6f"]
+    | ["\u0ce6"-"\u0cef"]
+    | ["\u0d66"-"\u0d6f"]
+    | ["\u0e50"-"\u0e59"]
+    | ["\u0ed0"-"\u0ed9"]
+    | ["\u1040"-"\u1049"]
+    >
+}
+
+// lexical macros
+TOKEN :
+{   <#DIGIT : ["0"-"9"]>
+}
+
+// errneous token
+TOKEN :
+{   <ERRONEOUS : ~[] >
+}
+
+// ----------------- accessors -----------------
+void parseConstraint() :
+{
+}
+{
+    Constraint()
+    <EOF>
+}
+
+// ----------------- syntax part --------------------
+/*
+Constraint:
+    Or
+*/
+private void Constraint() :
+{
+}
+{
+    Or()
+}
+
+/*
+Or:
+    Or 'OR' And
+    And
+*/
+private void Or() :
+{
+}
+{
+    And()
+    (
+        <OR>
+        And()
+    )*
+}
+
+/*
+And:
+    And 'AND' Atom
+    Atom
+*/
+private void And() :
+{
+}
+{
+    Atom()
+    (
+        <AND>
+        Atom()
+    )*
+}
+
+/*
+Atom:
+    Relational
+    Quantification
+    Block
+*/
+private void Atom() :
+{
+}
+{   Relational()
+|   Quantification()
+|   Block()
+}
+
+/*
+Relational:
+    Term Operator Term
+    Term 'IN' Tuple
+*/
+private void Relational() :
+{
+}
+{
+    Term()
+    (
+        Operator()
+        Term()
+    |
+        <IN>
+        Tuple()
+    )
+}
+
+/*
+Quantification:
+    'EXISTS' Name 'IN' Primary Atom
+    'EXISTS' Name 'IN' Tuple Atom
+*/
+private void Quantification() :
+{
+}
+{
+    <EXISTS>
+    Name()
+    <IN>
+    (
+        Primary()
+        Atom()
+    |
+        Tuple()
+        Atom()
+    )
+}
+
+/*
+Block:
+    '{' Constraint '}'
+*/
+private void Block() :
+{
+}
+{
+    "{"
+    Constraint()
+    "}"
+}
+
+/*
+Term:
+    Primary
+*/
+private void Term() :
+{
+}
+{
+    Primary()
+}
+
+/*
+Tuple:
+    '(' TermList ')'    
+*/
+private void Tuple() :
+{
+}
+{
+    "("
+    TermList()
+    ")"
+}
+
+/*
+Primary:
+    Property
+    Literal
+    Construct
+    Name
+*/
+private void Primary() :
+{
+    Token t;
+}
+{
+    Literal()
+|
+    LOOKAHEAD(2)
+    Property()
+|
+    LOOKAHEAD(2)
+    Construct()
+|
+    Name()
+}
+
+/*
+Operator:
+    '=='
+    '!='
+    '<'
+    '>'
+    '<='
+    '>='
+    'LIKE'
+*/
+private void Operator() :
+{
+}
+{   <DOUBLE_EQUAL>
+|   <NOT_EQUAL>
+|   <LESS_THAN>
+|   <GREATER_THAN>
+|   <LESS_THAN_OR_EQUAL>
+|   <GREATER_THAN_OR_EQUAL>
+|   <LIKE>
+}
+
+/*
+TermList:
+    Term ',' TermList
+    Term
+*/
+private void TermList() :
+{
+}
+{
+    Term()
+    (
+        ","
+        Term()
+    )*
+}
+
+/*
+Property:
+    ID '.' ID
+*/
+private void Property() :
+{
+}
+{
+    <ID> "." <ID>
+}
+
+/*
+Literal:
+    IntegerLiteral
+    RealNumberLiteral
+    BooleanLiteral
+    StringLiteral
+    NullLiteral
+*/
+private void Literal() :
+{
+}
+{
+    <INTEGER>
+|
+    <REAL_NUMBER>
+|
+    <STRING>
+|
+    <TRUE>
+|
+    <FALSE>
+|
+    <NULL>
+}
+
+/*
+Construct:
+    ID '(' TermList ')'
+*/
+private void Construct() :
+{
+}
+{
+    <ID> "(" TermList() ")"
+}
+
+/*
+Name:
+    ID
+*/
+private void Name() :
+{
+}
+{
+    <ID>
+}
