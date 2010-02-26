@@ -68,12 +68,20 @@ SPECIAL_TOKEN :
 
 /*
 Keyword : one of
-    FROM WHERE EXISTS
+     SELECT APPLY EVERY FROM WHERE EXISTS
+     ORDER BY ASC DESC
 */
 TOKEN [IGNORE_CASE] :
-{   <FROM : "from">
+{   <SELECT : "select">
+|   <APPLY : "apply">
+|   <EVERY : "every">
+|   <FROM : "from">
 |   <WHERE : "where">
 |   <EXISTS : "exists">
+|   <ORDER : "order">
+|   <BY : "by">
+|   <ASC : "asc">
+|   <DESC : "desc">
 }
 
 /*
@@ -312,6 +320,31 @@ void parseConstraint() :
 }
 
 // ----------------- syntax part --------------------
+/*
+Query:
+    SelectStatement
+    ApplyStatement
+SelectStatement:
+    'SELECT' TermList Source Filter? Order?
+ApplyStatement:
+    'APPLY' Procedure Source Filter? Order?
+Procedure:
+    Name '(' TermList ')'
+    Name '(' TermList ')' 'EVERY' INTEGER
+Source:
+    'FROM' Type Name
+Filter:
+    'WHERE' Constraint
+Order:
+    'ORDER' 'BY' OrderCriterionList
+OrderCriterionList:
+    OrderCriterionList ',' OrderCriterion
+    OrderCriterion
+OrderCriterion:
+    Term 'ASC'
+    Term 'DESC'
+*/
+
 /*
 Constraint:
     Or
