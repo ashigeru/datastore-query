@@ -23,13 +23,22 @@ import java.io.Reader;
  */
 public class DatastoreQueryParser {
 
+    public void parseQuery(Reader reader) {
+        DatastoreQueryParser0 engine = new DatastoreQueryParser0(reader);
+        try {
+            engine.parseQuery();
+        }
+        catch (ParseException e) {
+            throw new AssertionError(e);
+        }
+    }
+
     public void parseConstraint(Reader reader) {
         DatastoreQueryParser0 engine = new DatastoreQueryParser0(reader);
         try {
             engine.parseConstraint();
         }
         catch (ParseException e) {
-            // TODO Catch ParseException 2010/02/25 19:22:27
             throw new AssertionError(e);
         }
     }

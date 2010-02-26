@@ -263,7 +263,7 @@ TOKEN :
 Identifier
 */
 TOKEN :
-{   <ID : <IDENTIFIER_START> (<IDENTIFIER_PART>)* >
+{   <IDENTIFIER : <IDENTIFIER_START> (<IDENTIFIER_PART>)* >
 |   <#IDENTIFIER_START : <JAVA_ID_LETTER> >
 |   <#IDENTIFIER_PART : <JAVA_ID_LETTER> | <JAVA_ID_DIGIT> >
 |   <#JAVA_ID_LETTER
@@ -311,6 +311,14 @@ TOKEN :
 }
 
 // ----------------- accessors -----------------
+void parseQuery() :
+{
+}
+{
+    Query()
+    <EOF>
+}
+
 void parseConstraint() :
 {
 }
@@ -324,26 +332,180 @@ void parseConstraint() :
 Query:
     SelectStatement
     ApplyStatement
+*/
+private void Query() :
+{
+}
+{
+    SelectStatement()
+|
+    ApplyStatement()
+}
+
+/*
 SelectStatement:
     'SELECT' TermList Source Filter? Order?
+*/
+private void SelectStatement() :
+{
+}
+{
+    <SELECT>
+    TermList()
+    Source()
+    (
+        Filter()
+    |
+        {}
+    )
+    (
+        Order()
+    |
+        {}
+    )
+}
+
+/*
 ApplyStatement:
     'APPLY' Procedure Source Filter? Order?
+*/
+private void ApplyStatement() :
+{
+}
+{
+    <APPLY>
+    Procedure()
+    Source()
+    (
+        Filter()
+    |
+        {}
+    )
+    (
+        Order()
+    |
+        {}
+    )
+}
+
+/*
 Procedure:
     Name '(' TermList ')'
-    Name '(' TermList ')' 'EVERY' INTEGER
+    Name '(' TermList ')' 'EVERY' IntegerLiteral
+*/
+private void Procedure() :
+{
+}
+{
+    Name()
+    "("
+    TermList()
+    ")"
+    (
+        <EVERY>
+        IntegerLiteral()
+    |
+        {}
+    )
+}
+
+/*
 Source:
     'FROM' Type Name
+*/
+private void Source() :
+{
+}
+{
+    <FROM>
+    Type()
+    Name()
+}
+
+/*
+Type:
+    QualifiedName
+*/
+private void Type() :
+{
+}
+{
+    QualifiedName()
+}
+
+/*
+QualifiedName:
+    QualifiedName '.' Name
+    Name
+*/
+private void QualifiedName() :
+{
+}
+{
+    Name()
+    (
+        "."
+        Name()
+    )*
+}
+
+/*
 Filter:
     'WHERE' Constraint
+*/
+private void Filter() :
+{
+}
+{
+    <WHERE>
+    Constraint()
+}
+
+/*
 Order:
     'ORDER' 'BY' OrderCriterionList
+*/
+private void Order() :
+{
+}
+{
+    <ORDER>
+    <BY>
+    OrderCriterionList()
+}
+
+/*
 OrderCriterionList:
     OrderCriterionList ',' OrderCriterion
     OrderCriterion
+*/
+private void OrderCriterionList() :
+{
+}
+{
+    OrderCriterion()
+    (
+        ","
+        OrderCriterion()
+    )*
+}
+
+/*
 OrderCriterion:
     Term 'ASC'
     Term 'DESC'
 */
+private void OrderCriterion() :
+{
+}
+{
+    Term()
+    (
+        <ASC>
+    |
+        <DESC>
+    )
+}
 
 /*
 Constraint:
@@ -633,16 +795,71 @@ private void Literal() :
 {
 }
 {
+    IntegerLiteral()
+|
+    RealNumberLiteral()
+|
+    BooleanLiteral()
+|
+    StringLiteral()
+|
+    NullLiteral()
+}
+
+/*
+IntegerLiteral:
+    INTEGER
+*/
+private void IntegerLiteral() :
+{
+}
+{
     <INTEGER>
-|
+}
+
+/*
+RealNumberLiteral:
+    REAL_NUMBER
+*/
+private void RealNumberLiteral() :
+{
+}
+{
     <REAL_NUMBER>
-|
-    <STRING>
-|
+}
+
+/*
+BooleanLiteral: one of
+    TRUE FALSE
+*/
+private void BooleanLiteral() :
+{
+}
+{
     <TRUE>
 |
     <FALSE>
-|
+}
+
+/*
+StringLiteral:
+    STRING
+*/
+private void StringLiteral() :
+{
+}
+{
+    <STRING>
+}
+
+/*
+NullLiteral:
+    NULL
+*/
+private void NullLiteral() :
+{
+}
+{
     <NULL>
 }
 
@@ -662,11 +879,11 @@ private void Construct() :
 
 /*
 Name:
-    ID
+    IDENTIFIER
 */
 private void Name() :
 {
 }
 {
-    <ID>
+    <IDENTIFIER>
 }

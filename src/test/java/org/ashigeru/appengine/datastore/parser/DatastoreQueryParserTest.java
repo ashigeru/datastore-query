@@ -29,6 +29,30 @@ import org.junit.Test;
 public class DatastoreQueryParserTest {
 
     /**
+     * Test method for {@link DatastoreQueryParser#parseQuery(Reader)}.
+     */
+    @Test
+    public void testParseQuery_Select() {
+        Reader source = r(new String[] {
+                "SELECT h FROM Hoge h",
+        });
+        DatastoreQueryParser parser = new DatastoreQueryParser();
+        parser.parseQuery(source);
+    }
+
+    /**
+     * Test method for {@link DatastoreQueryParser#parseQuery(Reader)}.
+     */
+    @Test
+    public void testParseQuery_Apply() {
+        Reader source = r(new String[] {
+                "APPLY function(h) FROM Hoge h",
+        });
+        DatastoreQueryParser parser = new DatastoreQueryParser();
+        parser.parseQuery(source);
+    }
+
+    /**
      * Test method for {@link DatastoreQueryParser#parseConstraint(Reader)}.
      */
     @Test
