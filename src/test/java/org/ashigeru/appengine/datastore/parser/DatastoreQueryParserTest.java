@@ -53,6 +53,32 @@ public class DatastoreQueryParserTest {
     }
 
     /**
+     * Test method for {@link DatastoreQueryParser#parseQuery(Reader)}.
+     */
+    @Test
+    public void testParseQuery_Filter() {
+        Reader source = r(new String[] {
+                "SELECT h FROM Hoge h",
+                "WHERE h.field == 1",
+        });
+        DatastoreQueryParser parser = new DatastoreQueryParser();
+        parser.parseQuery(source);
+    }
+
+    /**
+     * Test method for {@link DatastoreQueryParser#parseQuery(Reader)}.
+     */
+    @Test
+    public void testParseQuery_Order() {
+        Reader source = r(new String[] {
+                "SELECT h FROM Hoge h",
+                "ORDER BY h.field DESC",
+        });
+        DatastoreQueryParser parser = new DatastoreQueryParser();
+        parser.parseQuery(source);
+    }
+
+    /**
      * Test method for {@link DatastoreQueryParser#parseConstraint(Reader)}.
      */
     @Test
