@@ -15,11 +15,18 @@
  */
 package org.ashigeru.appengine.datastore.parser;
 
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
+import java.util.Arrays;
+import java.util.List;
 
+import org.ashigeru.appengine.datastore.common.LiteralKind;
+import org.ashigeru.appengine.datastore.common.OrderDirection;
+import org.ashigeru.appengine.datastore.common.RelationalOperator;
 import org.junit.Test;
 
 /**
@@ -29,65 +36,79 @@ import org.junit.Test;
 public class DatastoreQueryParserTest {
 
     /**
-     * Test method for {@link DatastoreQueryParser#parseQuery(Reader)}.
+     * Test method for {@link DatastoreQueryParser#parse(Reader)}.
      */
     @Test
-    public void testParseQuery_Select() {
+    public void testparse_Select() {
         Reader source = r(new String[] {
                 "SELECT h FROM Hoge h",
         });
-        DatastoreQueryParser parser = new DatastoreQueryParser();
-        parser.parseQuery(source);
+        verify(source, new SelectStatement(
+            list(name("h")),
+            new Source(type("Hoge"), name("h")),
+            null,
+            null));
     }
 
     /**
-     * Test method for {@link DatastoreQueryParser#parseQuery(Reader)}.
+     * Test method for {@link DatastoreQueryParser#parse(Reader)}.
      */
     @Test
-    public void testParseQuery_Apply() {
+    public void testparse_Apply() {
         Reader source = r(new String[] {
                 "APPLY function(h) FROM Hoge h",
         });
-        DatastoreQueryParser parser = new DatastoreQueryParser();
-        parser.parseQuery(source);
+        verify(source, new ApplyStatement(
+            new Procedure(
+                name("function"),
+                list(name("h")),
+                null),
+            new Source(type("Hoge"), name("h")),
+            null,
+            null));
     }
 
     /**
-     * Test method for {@link DatastoreQueryParser#parseQuery(Reader)}.
+     * Test method for {@link DatastoreQueryParser#parse(Reader)}.
      */
     @Test
-    public void testParseQuery_Filter() {
+    public void testparse_Filter() {
         Reader source = r(new String[] {
                 "SELECT h FROM Hoge h",
                 "WHERE h.field == 1",
         });
-        DatastoreQueryParser parser = new DatastoreQueryParser();
-        parser.parseQuery(source);
+        verify(source, new SelectStatement(
+            list(name("h")),
+            new Source(type("Hoge"), name("h")),
+            new Filter(
+                new Relational(
+                    RelationalOperator.EQUAL,
+                    new PropertyTerm(
+                        name("h"),
+                        name("field")),
+                    new Literal(LiteralKind.INTEGER, "1"))),
+            null));
     }
 
     /**
-     * Test method for {@link DatastoreQueryParser#parseQuery(Reader)}.
+     * Test method for {@link DatastoreQueryParser#parse(Reader)}.
      */
     @Test
-    public void testParseQuery_Order() {
+    public void testparse_Order() {
         Reader source = r(new String[] {
                 "SELECT h FROM Hoge h",
                 "ORDER BY h.field DESC",
         });
-        DatastoreQueryParser parser = new DatastoreQueryParser();
-        parser.parseQuery(source);
-    }
-
-    /**
-     * Test method for {@link DatastoreQueryParser#parseConstraint(Reader)}.
-     */
-    @Test
-    public void testParseConstraint_Simple() {
-        Reader source = r(new String[] {
-                "a == 0",
-        });
-        DatastoreQueryParser parser = new DatastoreQueryParser();
-        parser.parseConstraint(source);
+        verify(source, new SelectStatement(
+            list(name("h")),
+            new Source(type("Hoge"), name("h")),
+            null,
+            new Order(list(
+                new OrderCriterion(
+                    OrderDirection.DESC,
+                    new PropertyTerm(
+                        name("h"),
+                        name("field")))))));
     }
 
     private static Reader r(String...lines) {
@@ -101,5 +122,33 @@ public class DatastoreQueryParserTest {
             buf.append(lines[i]);
         }
         return new StringReader(buf.toString());
+    }
+
+    private void verify(Reader source, Statement expect) {
+        try {
+            DatastoreQueryParser parser = new DatastoreQueryParser();
+            Statement statement = parser.parse(source);
+            assertThat(statement.accept(new Matcher(), expect), is(true));
+        }
+        finally {
+            try {
+                source.close();
+            }
+            catch (IOException e) {
+                throw new AssertionError(e);
+            }
+        }
+    }
+
+    private <T> List<T> list(T...elements) {
+        return Arrays.asList(elements);
+    }
+
+    private Type type(String name) {
+        return new Type(name(name));
+    }
+
+    private SimpleName name(String identifier) {
+        return new SimpleName(identifier);
     }
 }

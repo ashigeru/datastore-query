@@ -23,20 +23,19 @@ import java.io.Reader;
  */
 public class DatastoreQueryParser {
 
-    public void parseQuery(Reader reader) {
+    /**
+     * 指定のストリームからデータストアクエリを読み出して、解析して返す。
+     * @param reader 対象のストリーム
+     * @return 解析結果の構文木
+     * @throws IllegalArgumentException 引数に{@code null}が含まれる場合
+     */
+    public Statement parse(Reader reader) {
+        if (reader == null) {
+            throw new IllegalArgumentException("reader is null"); //$NON-NLS-1$
+        }
         DatastoreQueryParser0 engine = new DatastoreQueryParser0(reader);
         try {
-            engine.parseQuery();
-        }
-        catch (ParseException e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    public void parseConstraint(Reader reader) {
-        DatastoreQueryParser0 engine = new DatastoreQueryParser0(reader);
-        try {
-            engine.parseConstraint();
+            return engine.parse();
         }
         catch (ParseException e) {
             throw new AssertionError(e);

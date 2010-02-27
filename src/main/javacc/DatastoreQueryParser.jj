@@ -42,7 +42,21 @@ PARSER_BEGIN(DatastoreQueryParser0)
  */
 package org.ashigeru.appengine.datastore.parser;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import org.ashigeru.appengine.datastore.common.*;
+
 class DatastoreQueryParser0 {
+
+    private static <T> List<T> newList() {
+        return new ArrayList<T>();
+    }
+
+    private static <T> List<T> empty() {
+        return Collections.emptyList();
+    }
 }
 PARSER_END(DatastoreQueryParser0)
 
@@ -311,20 +325,14 @@ TOKEN :
 }
 
 // ----------------- accessors -----------------
-void parseQuery() :
+Statement parse() :
 {
+    Statement s;
 }
 {
-    Query()
+    s = Query()
     <EOF>
-}
-
-void parseConstraint() :
-{
-}
-{
-    Constraint()
-    <EOF>
+    { return s; }
 }
 
 // ----------------- syntax part --------------------
@@ -333,104 +341,132 @@ Query:
     SelectStatement
     ApplyStatement
 */
-private void Query() :
+private Statement Query() :
 {
+    Statement s;
 }
 {
-    SelectStatement()
+    s = SelectStatement()
+    { return s; }
 |
-    ApplyStatement()
+    s = ApplyStatement()
+    { return s; }
 }
 
 /*
 SelectStatement:
     'SELECT' TermList Source Filter? Order?
 */
-private void SelectStatement() :
+private SelectStatement SelectStatement() :
 {
+    List<Term> t;
+    Source s;
+    Filter f = null;
+    Order o = null;
 }
 {
     <SELECT>
-    TermList()
-    Source()
+    t = TermList()
+    s = Source()
     (
-        Filter()
+        f = Filter()
     |
         {}
     )
     (
-        Order()
+        o = Order()
     |
         {}
     )
+    { return new SelectStatement(t, s, f, o); }
 }
 
 /*
 ApplyStatement:
     'APPLY' Procedure Source Filter? Order?
 */
-private void ApplyStatement() :
+private ApplyStatement ApplyStatement() :
 {
+    Procedure p;
+    Source s;
+    Filter f = null;
+    Order o = null;
 }
 {
     <APPLY>
-    Procedure()
-    Source()
+    p = Procedure()
+    s = Source()
     (
-        Filter()
+        f = Filter()
     |
         {}
     )
     (
-        Order()
+        o = Order()
     |
         {}
     )
+    { return new ApplyStatement(p, s, f, o); }
 }
 
 /*
 Procedure:
-    Name '(' TermList ')'
+    Name '(' TermList? ')'
     Name '(' TermList ')' 'EVERY' IntegerLiteral
 */
-private void Procedure() :
+private Procedure Procedure() :
 {
+    SimpleName n;
+    List<Term> t = empty();
+    Literal i = null;
 }
 {
-    Name()
+    n = Name()
     "("
-    TermList()
-    ")"
     (
-        <EVERY>
-        IntegerLiteral()
+        t = TermList()
+        ")"
+        (
+            <EVERY>
+            i = IntegerLiteral()
+        |
+            {}
+        )
     |
-        {}
+        ")"
+        {
+        }
     )
+    { return new Procedure(n, t, i); }
 }
 
 /*
 Source:
     'FROM' Type Name
 */
-private void Source() :
+private Source Source() :
 {
+    Type t;
+    SimpleName n;
 }
 {
     <FROM>
-    Type()
-    Name()
+    t = Type()
+    n = Name()
+    { return new Source(t, n); }
 }
 
 /*
 Type:
     QualifiedName
 */
-private void Type() :
+private Type Type() :
 {
+    Name n;
 }
 {
-    QualifiedName()
+    n = QualifiedName()
+    { return new Type(n); }
 }
 
 /*
@@ -438,40 +474,48 @@ QualifiedName:
     QualifiedName '.' Name
     Name
 */
-private void QualifiedName() :
+private Name QualifiedName() :
 {
+    Name q;
+    SimpleName s;
 }
 {
-    Name()
+    q = Name()
     (
         "."
-        Name()
+        s = Name()
+        { q = new QualifiedName(q, s); }
     )*
+    { return q; }
 }
 
 /*
 Filter:
     'WHERE' Constraint
 */
-private void Filter() :
+private Filter Filter() :
 {
+    Constraint c;
 }
 {
     <WHERE>
-    Constraint()
+    c = Constraint()
+    { return new Filter(c); }
 }
 
 /*
 Order:
     'ORDER' 'BY' OrderCriterionList
 */
-private void Order() :
+private Order Order() :
 {
+    List<OrderCriterion> o;
 }
 {
     <ORDER>
     <BY>
-    OrderCriterionList()
+    o = OrderCriterionList()
+    { return new Order(o); }
 }
 
 /*
@@ -479,15 +523,20 @@ OrderCriterionList:
     OrderCriterionList ',' OrderCriterion
     OrderCriterion
 */
-private void OrderCriterionList() :
+private List<OrderCriterion> OrderCriterionList() :
 {
+    OrderCriterion o;
+    List<OrderCriterion> list = newList();
 }
 {
-    OrderCriterion()
+    o = OrderCriterion()
+    { list.add(o); }
     (
         ","
-        OrderCriterion()
+        o = OrderCriterion()
+        { list.add(o); }
     )*
+    { return list; }
 }
 
 /*
@@ -495,15 +544,18 @@ OrderCriterion:
     Term 'ASC'
     Term 'DESC'
 */
-private void OrderCriterion() :
+private OrderCriterion OrderCriterion() :
 {
+    Term t;
 }
 {
-    Term()
+    t = Term()
     (
         <ASC>
+        { return new OrderCriterion(OrderDirection.ASC, t); }
     |
         <DESC>
+        { return new OrderCriterion(OrderDirection.DESC, t); }
     )
 }
 
@@ -511,11 +563,13 @@ private void OrderCriterion() :
 Constraint:
     Or
 */
-private void Constraint() :
+private Constraint Constraint() :
 {
+    Constraint c;
 }
 {
-    Or()
+    c = Or()
+    { return c; }
 }
 
 /*
@@ -523,15 +577,18 @@ Or:
     Or 'OR' And
     And
 */
-private void Or() :
+private Constraint Or() :
 {
+    Constraint c, r;
 }
 {
-    And()
+    c = And()
     (
         <OR>
-        And()
+        r = And()
+        { c = new OrConstraint(c, r); }
     )*
+    { return c; }
 }
 
 /*
@@ -539,15 +596,18 @@ And:
     And 'AND' Not
     Not
 */
-private void And() :
+private Constraint And() :
 {
+    Constraint c, r;
 }
 {
-    Not()
+    c = Not()
     (
         <AND>
-        Not()
+        r = Not()
+        { c = new AndConstraint(c, r); }
     )*
+    { return c; }
 }
 
 /*
@@ -555,13 +615,17 @@ Not:
     'NOT' Not
     Atom
 */
-private void Not() :
+private Constraint Not() :
 {
+    Constraint c;
 }
 {
-    <NOT> Not()
+    <NOT>
+    c = Not()
+    { return new NotConstraint(c); }
 |
-	Atom()
+	c = Atom()
+	{ return c; }
 }
 
 /*
@@ -570,57 +634,73 @@ Atom:
     Relational
     Quantification
 */
-private void Atom() :
+private Constraint Atom() :
 {
+    Constraint c;
 }
 {
 	LOOKAHEAD( Relational() )
-    Relational()
+    c = Relational()
+    { return c; }
 |
 	"("
-	Constraint()
-	")" 
+	c = Constraint()
+	")"
+	{ return new Block(c); }
 |
-    Quantification()
+    c = Quantification()
+    { return c; }
 }
 
 /*
 Relational:
     Term Operator Term
 */
-private void Relational() :
+private Relational Relational() :
 {
+    Term l, r;
+    RelationalOperator o;
 }
 {
-    Term()
-    Operator()
-    Term()
+    l = Term()
+    o = Operator()
+    r = Term()
+    { return new Relational(o, l, r); }
 }
 
 /*
 Quantification:
+    'EXISTS' Name 'IN' Primary ',' Atom
     'EXISTS' Name 'IN' Primary Atom
 */
-private void Quantification() :
+private Quantification Quantification() :
 {
+    SimpleName s;
+    Term t;
+    Constraint c;
 }
 {
     <EXISTS>
-    Name()
+    s = Name()
     <IN>
-    Primary()
-    Atom()
+    t = Primary()
+    ( "," )?
+    c = Atom()
+    { return new Quantification(s, t, c); }
+    
 }
 
 /*
 Term:
     Additive
 */
-private void Term() :
+private Term Term() :
 {
+    Term t;
 }
 {
-    Additive()
+    t = Additive()
+    { return t; }
 }
 
 /*
@@ -629,18 +709,22 @@ Additive:
     Additive '-' Multiplicative
     Multiplicative
 */
-private void Additive() :
+private Term Additive() :
 {
+    Term t, r;
 }
 {
-    Multiplicative()
+    t = Multiplicative()
 	(
 	    <ADD>
-	    Multiplicative()
+	    r = Multiplicative()
+        { t = new BinaryTerm(BinaryTermOperator.ADD, t, r); }
 	|
 	    <SUBTRACT>
-	    Multiplicative()
+	    r = Multiplicative()
+        { t = new BinaryTerm(BinaryTermOperator.SUBTRACT, t, r); }
 	)*
+    { return t; }
 }
 
 /*
@@ -650,36 +734,49 @@ Multiplicative:
     Multiplicative '%' Unary
     Unary
 */
-private void Multiplicative() :
+private Term Multiplicative() :
 {
+    Term t, r;
 }
 {
-	Unary()
+	t = Unary()
 	(
 	    <MULTIPLY>
-	    Unary()
+	    r = Unary()
+        { t = new BinaryTerm(BinaryTermOperator.MULTIPLY, t, r); }
 	|
 	    <DIVIDE>
-	    Unary()
+	    r = Unary()
+        { t = new BinaryTerm(BinaryTermOperator.DIVIDE, t, r); }
 	|
 	    <REMAINDER>
-	    Unary()
+	    r = Unary()
+        { t = new BinaryTerm(BinaryTermOperator.REMAINDER, t, r); }
 	)*
+    { return t; }
 }
 
 /*
 Unary:
+    '+' Unary
     '-' Unary
     Primary
 */
-private void Unary() :
+private Term Unary() :
 {
+    Term t;
 }
 {
-	<SUBTRACT>
-	Unary()
+	<ADD>
+	t = Unary()
+    { return new UnaryTerm(UnaryTermOperator.PLUS, t); }
 |
-    Primary()
+	<SUBTRACT>
+	t = Unary()
+    { return new UnaryTerm(UnaryTermOperator.MINUS, t); }
+|
+    t = Primary()
+    { return t; }
 }
 
 /*
@@ -691,26 +788,32 @@ Primary:
     List
     Name
 */
-private void Primary() :
+private Term Primary() :
 {
-    Token t;
+    Term t;
 }
 {
 	"("
-	Term()
+	t = Term()
 	")"
+	{ return new ParenthesizedTerm(t); }
 |
-    Literal()
+    t = Literal()
+    { return t; }
 |
-	List()
+	t = List()
+    { return t; }
 |
     LOOKAHEAD(2)
-    Property()
+    t = Property()
+    { return t; }
 |
     LOOKAHEAD(2)
-    Construct()
+    t = Construct()
+    { return t; }
 |
-    Name()
+    t = Name()
+    { return t; }
 }
 
 /*
@@ -724,34 +827,52 @@ Operator:
     'LIKE'
     'IN'
 */
-private void Operator() :
+private RelationalOperator Operator() :
 {
 }
-{   <DOUBLE_EQUAL>
-|   <NOT_EQUAL>
-|   <LESS_THAN>
-|   <GREATER_THAN>
-|   <LESS_THAN_OR_EQUAL>
-|   <GREATER_THAN_OR_EQUAL>
-|   <LIKE>
-|	<IN>
+{
+    <DOUBLE_EQUAL>
+    { return RelationalOperator.EQUAL; }
+|
+    <NOT_EQUAL>
+    { return RelationalOperator.NOT_EQUAL; }
+|
+    <LESS_THAN>
+    { return RelationalOperator.LESS_THAN; }
+|
+    <GREATER_THAN>
+    { return RelationalOperator.GREATER_THAN; }
+|
+    <LESS_THAN_OR_EQUAL>
+    { return RelationalOperator.LESS_THAN_OR_EQUAL; }
+|
+    <GREATER_THAN_OR_EQUAL>
+    { return RelationalOperator.GREATER_THAN_OR_EQUAL; }
+|
+    <LIKE>
+    { return RelationalOperator.LIKE; }
+|
+ 	<IN>
+ 	{ return RelationalOperator.IN; }
 }
 
 /*
 List:
     '[' TermList? ']'
 */
-private void List() :
+private ListTerm List() :
 {
+    List<Term> t = empty();
 }
 {
     "["
     (
-    	TermList()
+    	t = TermList()
     |
     	{}
     )
     "]"
+    { return new ListTerm(t); }
 }
 
 /*
@@ -759,28 +880,36 @@ TermList:
     Term ',' TermList
     Term
 */
-private void TermList() :
+private List<Term> TermList() :
 {
+    Term t;
+    List<Term> list = newList();
 }
 {
-    Term()
+    t = Term()
+    { list.add(t); }
     (
         ","
-        Term()
+        t = Term()
+        { list.add(t); }
     )*
+    { return list; }
 }
 
 /*
 Property:
     Name '.' Name
 */
-private void Property() :
+private PropertyTerm Property() :
 {
+    SimpleName o;
+    SimpleName p;
 }
 {
-    Name()
+    o = Name()
     "."
-    Name()
+    p = Name()
+    { return new PropertyTerm(o, p); }
 }
 
 /*
@@ -791,99 +920,121 @@ Literal:
     StringLiteral
     NullLiteral
 */
-private void Literal() :
+private Literal Literal() :
 {
+    Literal l;
 }
 {
-    IntegerLiteral()
+    l = IntegerLiteral()
+    { return l; }
 |
-    RealNumberLiteral()
+    l = RealNumberLiteral()
+    { return l; }
 |
-    BooleanLiteral()
+    l = BooleanLiteral()
+    { return l; }
 |
-    StringLiteral()
+    l = StringLiteral()
+    { return l; }
 |
-    NullLiteral()
+    l = NullLiteral()
+    { return l; }
 }
 
 /*
 IntegerLiteral:
     INTEGER
 */
-private void IntegerLiteral() :
+private Literal IntegerLiteral() :
 {
+    Token t;
 }
 {
-    <INTEGER>
+    t = <INTEGER>
+    { return new Literal(LiteralKind.INTEGER, t.image); }
 }
 
 /*
 RealNumberLiteral:
     REAL_NUMBER
 */
-private void RealNumberLiteral() :
+private Literal RealNumberLiteral() :
 {
+    Token t;
 }
 {
-    <REAL_NUMBER>
+    t = <REAL_NUMBER>
+    { return new Literal(LiteralKind.REAL_NUMBER, t.image); }
 }
 
 /*
 BooleanLiteral: one of
     TRUE FALSE
 */
-private void BooleanLiteral() :
+private Literal BooleanLiteral() :
 {
+    Token t;
 }
 {
-    <TRUE>
+    t = <TRUE>
+    { return new Literal(LiteralKind.BOOLEAN, t.image); }
 |
-    <FALSE>
+    t = <FALSE>
+    { return new Literal(LiteralKind.BOOLEAN, t.image); }
 }
 
 /*
 StringLiteral:
     STRING
 */
-private void StringLiteral() :
+private Literal StringLiteral() :
 {
+    Token t;
 }
 {
-    <STRING>
+    t = <STRING>
+    { return new Literal(LiteralKind.STRING, t.image); }
 }
 
 /*
 NullLiteral:
     NULL
 */
-private void NullLiteral() :
+private Literal NullLiteral() :
 {
+    Token t;
 }
 {
-    <NULL>
+    t = <NULL>
+    { return new Literal(LiteralKind.NULL, t.image); }
 }
 
 /*
 Construct:
     Name '(' TermList ')'
 */
-private void Construct() :
+private ConstructTerm Construct() :
 {
+    SimpleName s;
+    List<Term> t;
 }
 {
-    Name()
+    s = Name()
     "("
-    TermList()
+    t = TermList()
     ")"
+    { return new ConstructTerm(s, t); }
 }
 
 /*
 Name:
     IDENTIFIER
 */
-private void Name() :
+private SimpleName Name() :
 {
+    Token t;
 }
 {
-    <IDENTIFIER>
+    t = <IDENTIFIER>
+    { return new SimpleName(t.image); }
 }

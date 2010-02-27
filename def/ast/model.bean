@@ -1,0 +1,220 @@
+/*
+ * Copyright 2010 @ashigeru.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */
+[Doc="データストアを操作する文"]
+[Abstract]
+Statement extends Node {
+}
+
+[Doc="Select文"]
+SelectStatement extends Statement {
+    [Doc="射影結果の組"]
+    values : @Term;
+    [Doc="元となるエンティティの一覧"]
+    source : Source;
+    [Doc="フィルタ(省略可)"]
+    [Optional]
+    filter : Filter;
+    [Doc="整列順序(省略可)"]
+    [Optional]
+    order : Order;
+}
+
+[Doc="Apply文"]
+ApplyStatement extends Statement {
+    [Doc="結果に対して適用する手続き"]
+    procedure : Procedure;
+    [Doc="元となるエンティティの一覧"]
+    source : Source;
+    [Doc="フィルタ(省略可)"]
+    [Optional]
+    filter : Filter;
+    [Doc="整列順序(省略可)"]
+    [Optional]
+    order : Order;
+}
+
+[Doc="適用する手続き"]
+Procedure extends Node {
+    [Doc="手続きの名前"]
+    name : SimpleName;
+    [Doc="手続きに渡す引数の一覧"]
+    arguments : @Term;
+    [Doc="手続きに複数の要素を渡す場合の、1回分の最大数(省略可)"]
+    [Optional]
+    every : Term;
+}
+
+[Doc="From句"]
+Source extends Node {
+    [Doc="元となるエンティティの種類"]
+    type : Type;
+    [Doc="個々のエンティティを束縛するシンボルの名称"]
+    paremeter : SimpleName;
+}
+
+[Doc="Where句"]
+Filter extends Node {
+    [Doc="フィルタ制約"]
+    constraint : Constraint;
+}
+
+[Doc="Order By句"]
+Order extends Node {
+    [Doc="整列基準の一覧"]
+    criteria : @OrderCriterion;
+}
+
+[Doc="整列基準句"]
+OrderCriterion extends Node {
+    [Doc="整列する順序の方向"]
+    direction : OrderDirection;
+    [Doc="整列基準の項"]
+    target : Term;
+}
+
+[Doc="制約"]
+[Abstract]
+Constraint extends Node {}
+
+[Doc="選言制約"]
+OrConstraint extends Constraint {
+    [Doc="1つ目の制約"]
+    left : Constraint;
+    [Doc="2つ目の制約"]
+    right : Constraint;
+}
+
+[Doc="連言制約"]
+AndConstraint extends Constraint {
+    [Doc="1つ目の制約"]
+    left : Constraint;
+    [Doc="2つ目の制約"]
+    right : Constraint;
+}
+
+[Doc="否定制約"]
+NotConstraint extends Constraint {
+    [Doc="否定する対象の制約"]
+    operand : Constraint;
+}
+
+[Doc="比較制約"]
+Relational extends Constraint {
+    [Doc="比較演算子"]
+    operator : RelationalOperator;
+    [Doc="比較される項"]
+    left : Term;
+    [Doc="比較する項"]
+    right : Term;
+}
+
+[Doc="制約ブロック"]
+Block extends Constraint {
+    [Doc="制約"]
+    constraint : Constraint;
+}
+
+[Doc="量化制約"]
+Quantification extends Constraint {
+    [Doc="個々の項を束縛するシンボルの名前"]
+    parameter : SimpleName;
+    [Doc="量化対象の項"]
+    target : Term;
+    [Doc="量化する制約"]
+    constraint : Constraint;
+}
+
+[Doc="項"]
+[Abstract]
+Term extends Node {}
+
+[Doc="二項演算"]
+BinaryTerm extends Term {
+    [Doc="演算子"]
+    operator : BinaryTermOperator;
+    [Doc="被演算数"]
+    left : Term;
+    [Doc="演算数"]
+    right : Term;
+}
+
+[Doc="単項演算"]
+UnaryTerm extends Term {
+    [Doc="演算子"]
+    operator : UnaryTermOperator;
+    [Doc="演算数"]
+    operand : Term;
+}
+
+[Doc="括弧つき演算"]
+ParenthesizedTerm extends Term {
+    [Doc="内部の項"]
+    term : Term;
+}
+
+[Doc="リスト"]
+ListTerm extends Term {
+    [Doc="要素の一覧"]
+    elements : @Term;
+}
+
+[Doc="プロパティ参照"]
+PropertyTerm extends Term {
+    [Doc="プロパティを保持する変数"]
+    variable : SimpleName;
+    [Doc="プロパティの名称"]
+    name : SimpleName;
+}
+
+[Doc="コンストラクト"]
+ConstructTerm extends Term {
+    [Doc="コンストラクトの名称"]
+    name : SimpleName;
+    [Doc="コンストラクトに利用する引数の一覧"]
+    arguments : @Term;
+}
+
+[Doc="リテラル"]
+Literal extends Term {
+    [Doc="リテラルの種類"]
+    kind : LiteralKind;
+    [Doc="リテラルを構成するトークン"]
+    token : String;
+}
+
+[Doc="型"]
+Type extends Node {
+    [Doc="型名"]
+    name : Name;
+}
+
+[Doc="名前"]
+[Abstract]
+Name extends Term {}
+
+[Doc="単純名"]
+SimpleName extends Name {
+    [Doc="識別子"]
+    identifier : String;
+}
+
+[Doc="限定名"]
+QualifiedName extends Name {
+    [Doc="限定子"]
+    name : Name;
+    [Doc="単純名"]
+    simpleName : SimpleName;
+}
